@@ -1,0 +1,11 @@
+.deps/
+htsp_vala
+htsp_vala_vala.stamp
+.libs/
+*.c
+*.o
+*.vala~
+Makefile
+Makefile.am~
+Makefile.in
+
