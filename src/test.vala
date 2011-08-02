@@ -28,23 +28,43 @@ public enum FTypeID {
 }
 
 public abstract interface Field : Object {
-   public abstract FTypeID FType { get; }
+   public abstract FTypeID f_type { get; }
    public abstract string to_string ();
+   public abstract uint8[] to_bin ();
+   public abstract int f_size { get; }
 }
 
+
+//TODO: inhertigae ois probably not the way to go for Map and List. Containers should be add only
 class FieldMap : HashMap<string, Field>, Field {
    
    public FieldMap() {
       base();
    }
    
-   public FTypeID FType {
+   public FTypeID f_type {
       get { return FTypeID.MAP; }
    }
 
    public string to_string () {
-      var len = this.size;
+      var len = this.f_size;
       return @"<elements #: $len>";
+   }
+   
+   public uint8[] to_bin () {
+      //TODO: TBD!
+      return new uint8[0];
+   }
+   
+   public int f_size {
+      get {
+         int size = 0;
+         foreach (var key in this.keys) {
+            var field = this[key];
+            size += field.f_size; 
+         }
+         return size;
+      }
    }
 }
 
@@ -54,77 +74,154 @@ class FieldLst : ArrayList<Field>, Field {
       base();
    }
    
-   public FTypeID FType {
+   public FTypeID f_type {
       get { return FTypeID.LST; }
    }
 
    public string to_string () {
-      var len = this.size;
-      return @"<elements #: $len>";
+      var len = this.f_size;
+      return @"<element : $len>";
+   }
+
+   public uint8[] to_bin () {
+      //TODO: TBD!
+      return new uint8[0];
+   }
+
+   public int f_size {
+      get {
+         int size = 0;
+         foreach (var field in this) {
+            size += field.f_size; 
+         }
+         return size;
+      }
    }
 }
 
 class FieldS64 : Object, Field {
-   int64 data;
+   int64 _data;
    
-   public FieldS64(int64 data) {
-      this.data = data;
+   public FieldS64(int64 _data) {
+      this._data = _data;
    }
-      
-   public FTypeID FType {
+   public FieldS64.bin (uint8[] bin) {
+      // btw are value types initialized be def.?
+      _data = 0;
+      for (var i = 0; i < bin.length; i++) {
+         _data <<= 8;
+         _data |= bin[i]; 
+      }
+   }
+
+   public FTypeID f_type {
       get { return FTypeID.S64; }
    }
    
    public string to_string () {
-      return data.to_string();
+      return @"$(_data.to_string()) [$(this.f_size) B]";
    }
 
-   public int64 Data {
-      get { return data; }
-      set { this.data = value; }
+   public int64 data {
+      get { return _data; }
+      //set { this._data = value; }
+   }
+   
+   public uint8[] to_bin () {
+      
+      // are there any fancy memstream classes?
+      
+      var max = this.f_size;
+      uint8[] bin = new uint8[max];
+
+      for (var i = 0; i < max; i++) {
+         // is this bad? blah << -8
+         bin[i] = (uint8)(_data >> ((max - 1 - i) * 8));
+      }
+            
+      return bin;
+   }
+   
+   public int f_size {
+      get {
+      // this could be cached :)
+         var tmp = _data;
+         var _size = 0;
+         while (tmp != 0) {
+            tmp = tmp >> 8;
+            _size++;
+         }
+         return _size;
+      }
    }
 }
 
 class FieldStr : Object, Field {
-   string data;
+   string _data;
    
-   public FieldStr (string data) {
-      this.data = data;
+   public FieldStr (string _data) {
+      this._data = _data;
    }
    
-   public FTypeID FType {
-      get { return FTypeID.STR;}
+   public FieldStr.bin (uint8[] bin) {
+      
+      _data = (string)bin;
+   }
+   
+   public FTypeID f_type {
+      get { return FTypeID.STR; }
    }
 
    public string to_string () {
-      return data;
+      return @"$(_data) [$(this.f_size) B]";
    }
 
-   public string Data {
-      get { return data; }
-      set { this.data = value; }
+   public string data {
+      get { return _data; }
+      //set { this._data = value; }
    }
+
+   public uint8[] to_bin () {
+      return _data.data;
+   }
+
+   public int f_size {
+      get { return (int)_data.length; }
+   }   
 }
 
 class FieldBin : Object, Field {
-   uint8[] data;
+   uint8[] _data;
 
-   public FieldBin (uint8[] data) {
-      this.data = data;
+   public FieldBin (uint8[] _data) {
+      this._data = _data;
    }
 
-   public FTypeID FType {
+   // consistency
+   public FieldBin.bin (uint8[] _data) {
+      this._data = _data;
+   }
+
+   public FTypeID f_type {
       get { return FTypeID.BIN; }
    }
    
    public string to_string () {
-      var len = data.length.to_string();
-      return @"<elements #: $len>";
+      var len = _data.length.to_string();
+      return @"<elements #: $len> [$(this.f_size) B]";
    }
    
-   public uint8[] Data {
-      get { return data; }
-      set {data = value; }
+   public uint8[] to_bin () {
+      return _data;
+   }
+
+   public uint8[] data {
+      get { return _data; }
+      //set { _data = value; }
+   }
+   
+   public int f_size {
+      get { return (int)_data.length; }
    }
 }
 

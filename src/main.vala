@@ -30,15 +30,28 @@ public class Main : Object {
       
       var root = new FieldMap ();
       root["map"] = new FieldMap ();
-      root["int64"] = new FieldS64 (12);
-      root["string"] = new FieldStr ("hello");
+      root["int64"] = new FieldS64 (0xff000000);
+      root["int32"] = new FieldS64 (0x00ff0000);
+      root["int16"] = new FieldS64.bin ({0x5,0x39});
+      root["int8"] = new FieldS64  (0x000000ff);
+      root["string"] = new FieldStr ("hüllö");
       root["bin"] = new FieldBin ({1,2,3,4,5});
       root["list"] = new FieldLst ();
       
       foreach (var key in root.keys) {
          var field = root[key];
-         stdout.printf ("[%s]%s: %s\n", field.FType.to_string (), key, field.to_string());
+         stdout.printf ("[%s]%s: %s\n", field.f_type.to_string (), key, field.to_string());
       }
+      
+      ((FieldS64)root["int16"]).to_bin();
+      ((FieldStr)root["string"]).to_bin();
+      stdout.printf ("root-size: %i\n", root.f_size);
+      
+      uint8[] bar = new uint8[100];
+      MemoryOutputStream mout;
+      mout = new MemoryOutputStream(bar, null, free );
+      mout.write({'a','b','c'});
+      stdout.printf("%s\n", (string)mout.get_data());
       
       return 0;
    }
